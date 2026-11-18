@@ -1,0 +1,1924 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#101012">
+    <link rel="manifest" href="./manifest.json">
+    <title>Afinador Pro</title>
+    <style>
+        /* ==========================================
+           SISTEMA DE DISEÑO DARK MODE INSTRUMENTAL
+           ========================================== */
+        :root {
+            --bg-base: #101012;
+            --surface-elevated: #18181B;
+            --surface-interactive: #27272A;
+            --border-subtle: #27272A;
+            --border-strong: #3F3F46;
+            --border-active: #E4E4E7;
+
+            --text-primary: #F4F4F5;
+            --text-secondary: #A1A1AA;
+            --text-muted: #71717A;
+
+            --accent-studio: #38BDF8;
+            --accent-surface: rgba(56, 189, 248, 0.12);
+
+            --space-1: 8px;
+            --space-2: 16px;
+            --space-3: 24px;
+
+            --radius-sm: 10px;
+            --radius-md: 14px;
+
+            --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Roboto Mono", monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            height: 100dvh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        button {
+            background: none;
+            border: none;
+            color: inherit;
+            font: inherit;
+            cursor: pointer;
+            outline: none;
+            text-shadow: none;
+            box-shadow: none;
+            touch-action: manipulation;
+        }
+
+        button * {
+            pointer-events: none;
+        }
+
+        /* ==========================================
+           1. VISTA PRINCIPAL DEL AFINADOR
+           ========================================== */
+        #vista-principal {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding-top: max(var(--space-2), calc(env(safe-area-inset-top, 0px) + var(--space-2)));
+            padding-bottom: max(var(--space-2), calc(env(safe-area-inset-bottom, 0px) + var(--space-2)));
+            padding-inline: max(var(--space-2), env(safe-area-inset-left, 16px));
+            gap: var(--space-2);
+        }
+
+        header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 48px;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        #btn-config {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-md);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-primary);
+            background-color: var(--surface-elevated);
+            border: 1px solid var(--border-subtle);
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+
+        #btn-config:active {
+            background-color: var(--surface-interactive);
+            border-color: var(--border-strong);
+        }
+
+        #btn-config svg {
+            width: 22px;
+            height: 22px;
+            stroke: currentColor;
+        }
+
+        /* ==========================================
+           2. CONSOLA CENTRAL ESTROBOSCÓPICA
+           ========================================== */
+        main {
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+            background-color: var(--surface-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 18px var(--space-2);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        main.afinado-lock {
+            border-color: var(--accent-studio);
+        }
+
+        .strobe-viewport {
+            position: relative;
+            width: 100%;
+            height: 80px;
+            background-color: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+            padding: 6px 0;
+            flex-shrink: 0;
+            contain: strict;
+        }
+
+        .strobe-center-reticle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            background-color: var(--accent-studio);
+            transform: translateX(-50%);
+            z-index: 3;
+        }
+
+        .strobe-band {
+            width: 100%;
+            height: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            will-change: background-position;
+            transform: translateZ(0);
+        }
+
+        #banda-1 {
+            opacity: 0.45;
+            background-image: repeating-linear-gradient(
+                90deg,
+                var(--accent-studio) 0px,
+                var(--accent-studio) 14px,
+                transparent 14px,
+                transparent 28px
+            );
+        }
+
+        #banda-2 {
+            height: 22px;
+            opacity: 0.90;
+            background-image: repeating-linear-gradient(
+                90deg,
+                var(--accent-studio) 0px,
+                var(--accent-studio) 28px,
+                transparent 28px,
+                transparent 56px
+            );
+        }
+
+        #banda-3 {
+            opacity: 0.45;
+            background-image: repeating-linear-gradient(
+                90deg,
+                var(--accent-studio) 0px,
+                var(--accent-studio) 56px,
+                transparent 56px,
+                transparent 112px
+            );
+        }
+
+        .readout-cluster {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: auto 0;
+        }
+
+        #nota-gigante {
+            font-family: var(--font-mono);
+            font-size: 54px;
+            font-weight: 700;
+            line-height: 1;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: -0.03em;
+            color: var(--text-muted);
+        }
+
+        #nota-gigante.nota-activa {
+            color: var(--text-primary);
+        }
+
+        #nota-gigante.nota-afinada {
+            color: var(--accent-studio);
+        }
+
+        .telemetria-bar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background-color: var(--bg-base);
+            padding: 6px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-subtle);
+            min-height: 32px;
+        }
+
+        .separador-telemetria {
+            width: 1px;
+            height: 12px;
+            background-color: var(--border-strong);
+        }
+
+        #lectura-cents {
+            color: var(--text-primary);
+        }
+
+        #display-interactivo {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-align: center;
+            width: 100%;
+            min-height: 44px;
+            padding: var(--space-1) var(--space-2);
+            background-color: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* ==========================================
+           3. SELECTORES DE CLAVIJAS Y MICRÓFONO
+           ========================================== */
+        section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+            flex-shrink: 0;
+        }
+
+        #contenedor-cuerdas {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: repeat(3, 56px);
+            gap: var(--space-1);
+            grid-template-areas:
+                "cuerda6 cuerda3"
+                "cuerda5 cuerda2"
+                "cuerda4 cuerda1";
+        }
+
+        #cuerda-1 { grid-area: cuerda1; }
+        #cuerda-2 { grid-area: cuerda2; }
+        #cuerda-3 { grid-area: cuerda3; }
+        #cuerda-4 { grid-area: cuerda4; }
+        #cuerda-5 { grid-area: cuerda5; }
+        #cuerda-6 { grid-area: cuerda6; }
+
+        .btn-cuerda {
+            background-color: var(--surface-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            font-family: var(--font-mono);
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .btn-cuerda:active {
+            background-color: var(--surface-interactive);
+        }
+
+        .btn-cuerda.activa {
+            background-color: var(--surface-interactive);
+            border: 2px solid var(--accent-studio);
+            color: var(--text-primary);
+        }
+
+        #btn-mic {
+            width: 100%;
+            min-height: 60px;
+            padding: 0 var(--space-3);
+            border-radius: var(--radius-md);
+            background-color: var(--surface-elevated);
+            border: 1px solid var(--border-strong);
+            color: var(--text-primary);
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+
+        #btn-mic.activo {
+            background-color: var(--surface-interactive);
+            border: 2px solid var(--accent-studio);
+            color: var(--text-primary);
+        }
+
+        .icono-mic {
+            width: 20px;
+            height: 20px;
+            stroke: var(--accent-studio);
+            flex-shrink: 0;
+        }
+
+        /* ==========================================
+           4. PANEL DE CONFIGURACIÓN
+           ========================================== */
+        #vista-config {
+            width: 100%;
+            height: 100dvh;
+            background-color: var(--bg-base);
+            display: none;
+            flex-direction: column;
+            padding-top: max(var(--space-2), calc(env(safe-area-inset-top, 0px) + var(--space-2)));
+            padding-bottom: max(var(--space-2), calc(env(safe-area-inset-bottom, 0px) + var(--space-2)));
+            padding-inline: max(var(--space-2), env(safe-area-inset-left, 16px));
+            gap: var(--space-2);
+        }
+
+        .config-nav {
+            width: 100%;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 12px;
+            flex-shrink: 0;
+        }
+
+        #btn-atras-config {
+            min-height: 44px;
+            padding: 0 14px;
+            background-color: var(--surface-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 15px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #btn-atras-config:active {
+            background-color: var(--surface-interactive);
+            border-color: var(--border-strong);
+        }
+
+        #btn-atras-config svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+        }
+
+        .config-titulo {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .config-lista {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-top: 4px;
+        }
+
+        .config-item-btn {
+            width: 100%;
+            min-height: 74px;
+            background-color: var(--surface-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 14px var(--space-2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-2);
+            text-align: left;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .config-item-btn:active {
+            background-color: var(--surface-interactive);
+            border-color: var(--border-strong);
+        }
+
+        .config-item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .config-item-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .config-item-value {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .switch-pill {
+            width: 46px;
+            height: 26px;
+            border-radius: 999px;
+            background-color: var(--surface-interactive);
+            border: 1px solid var(--border-strong);
+            position: relative;
+            flex-shrink: 0;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .switch-Knob {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: var(--text-secondary);
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+
+        .config-item-btn[aria-checked="true"] .switch-pill {
+            background-color: var(--accent-surface);
+            border-color: var(--accent-studio);
+        }
+
+        .config-item-btn[aria-checked="true"] .switch-Knob {
+            transform: translateX(20px);
+            background-color: var(--accent-studio);
+        }
+
+        .chevron-icon {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .config-card-estatica {
+            width: 100%;
+            background-color: var(--surface-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 14px var(--space-2);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .calibracion-row {
+            display: grid;
+            grid-template-columns: 64px 1fr 64px;
+            gap: var(--space-1);
+            align-items: center;
+        }
+
+        .btn-calibrar {
+            height: 52px;
+            background-color: var(--surface-interactive);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
+            font-family: var(--font-mono);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-calibrar:active {
+            border-color: var(--accent-studio);
+        }
+
+        #valor-a4 {
+            height: 52px;
+            background-color: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            font-family: var(--font-mono);
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ==========================================
+           5. VENTANAS EMERGENTES (MODALES DE SELECCIÓN)
+           ========================================== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(16, 16, 18, 0.88);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding-top: max(var(--space-3), env(safe-area-inset-top, 24px));
+        }
+
+        .modal-sheet {
+            width: 100%;
+            max-height: 82dvh;
+            background-color: var(--surface-elevated);
+            border-top: 1px solid var(--border-strong);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            padding-top: var(--space-2);
+            padding-bottom: max(var(--space-2), calc(env(safe-area-inset-bottom, 0px) + var(--space-2)));
+            padding-inline: max(var(--space-2), env(safe-area-inset-left, 16px));
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .modal-sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-subtle);
+            flex-shrink: 0;
+        }
+
+        .modal-sheet-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-opciones-lista {
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 4px 0;
+        }
+
+        .opcion-modal-btn {
+            width: 100%;
+            min-height: 54px;
+            padding: 12px 16px;
+            background-color: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-align: left;
+        }
+
+        .opcion-modal-btn:active {
+            background-color: var(--surface-interactive);
+        }
+
+        .opcion-modal-btn.seleccionada {
+            background-color: var(--surface-interactive);
+            border-color: var(--accent-studio);
+            color: var(--text-primary);
+        }
+
+        .marca-seleccion {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: transparent;
+            flex-shrink: 0;
+        }
+
+        .opcion-modal-btn.seleccionada .marca-seleccion {
+            background-color: var(--accent-studio);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==========================================
+         1. VISTA PRINCIPAL DEL AFINADOR
+         ========================================== -->
+    <div id="vista-principal">
+        <header>
+            <!-- FLICK 1: Título -->
+            <h1>Afinador Pro</h1>
+            <!-- FLICK 2: Configuración -->
+            <button type="button" id="btn-config" aria-label="Configuración">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+        </header>
+
+        <!-- ZONA CENTRAL -->
+        <main id="consola-central">
+            <div class="strobe-viewport" aria-hidden="true">
+                <div class="strobe-center-reticle"></div>
+                <div class="strobe-band" id="banda-1"></div>
+                <div class="strobe-band" id="banda-2"></div>
+                <div class="strobe-band" id="banda-3"></div>
+            </div>
+
+            <div class="readout-cluster" aria-hidden="true">
+                <div id="nota-gigante">Mi 2</div>
+                <div class="telemetria-bar">
+                    <span id="lectura-hz">82.41 Hz</span>
+                    <span class="separador-telemetria"></span>
+                    <span id="lectura-cents">±0.0 cents</span>
+                </div>
+            </div>
+
+            <!-- FLICK 3: Centro Interactivo Único para el Lector de Pantalla -->
+            <div id="display-interactivo" tabindex="0" aria-live="polite" role="status">
+                Seleccione una cuerda para comenzar.
+            </div>
+        </main>
+
+        <!-- ZONA INFERIOR: CLAVIJAS Y MICRÓFONO -->
+        <section>
+            <!-- FLICKS 4 al 9: Clavijas de 1.ª a 6.ª sin la palabra "Botón" -->
+            <div id="contenedor-cuerdas">
+                <button type="button" class="btn-cuerda" id="cuerda-1" data-index="0" data-base-label="Primera cuerda, Mi 4" data-nota-visual="Mi 4" data-nota-hablada="Mi 4" data-hz="329.63" aria-label="Primera cuerda, Mi 4" aria-pressed="false">Mi 4</button>
+                <button type="button" class="btn-cuerda" id="cuerda-2" data-index="1" data-base-label="Segunda cuerda, Si 3" data-nota-visual="Si 3" data-nota-hablada="Si 3" data-hz="246.94" aria-label="Segunda cuerda, Si 3" aria-pressed="false">Si 3</button>
+                <button type="button" class="btn-cuerda" id="cuerda-3" data-index="2" data-base-label="Tercera cuerda, Sol 3" data-nota-visual="Sol 3" data-nota-hablada="Sol 3" data-hz="196.00" aria-label="Tercera cuerda, Sol 3" aria-pressed="false">Sol 3</button>
+                <button type="button" class="btn-cuerda" id="cuerda-4" data-index="3" data-base-label="Cuarta cuerda, Re 3" data-nota-visual="Re 3" data-nota-hablada="Re 3" data-hz="146.83" aria-label="Cuarta cuerda, Re 3" aria-pressed="false">Re 3</button>
+                <button type="button" class="btn-cuerda" id="cuerda-5" data-index="4" data-base-label="Quinta cuerda, La 2" data-nota-visual="La 2" data-nota-hablada="La 2" data-hz="110.00" aria-label="Quinta cuerda, La 2" aria-pressed="false">La 2</button>
+                <button type="button" class="btn-cuerda" id="cuerda-6" data-index="5" data-base-label="Sexta cuerda, Mi 2" data-nota-visual="Mi 2" data-nota-hablada="Mi 2" data-hz="82.41" aria-label="Sexta cuerda, Mi 2" aria-pressed="false">Mi 2</button>
+            </div>
+
+            <!-- FLICK 10: Botón de Control Principal -->
+            <button type="button" id="btn-mic">
+                <svg class="icono-mic" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="22"></line>
+                </svg>
+                <span id="texto-btn-mic">Activar micrófono</span>
+            </button>
+        </section>
+    </div>
+
+    <!-- ==========================================
+         2. PANEL DE CONFIGURACIÓN (JERARQUÍA ESTRICTA)
+         ========================================== -->
+    <div id="vista-config" role="region" aria-label="Configuración">
+        <div class="config-nav">
+            <!-- Primer elemento en el orden de enfoque: Botón Atrás en esquina superior izquierda -->
+            <button type="button" id="btn-atras-config">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 18l-6-6 6-6"></path>
+                </svg>
+                <span>Atrás</span>
+            </button>
+            <h2 class="config-titulo" aria-hidden="true">Configuración</h2>
+        </div>
+
+        <div class="config-lista">
+            <!-- OPCIÓN 1: Sonido de confirmación al afinar -->
+            <button type="button" id="btn-toggle-timbre" class="config-item-btn" role="switch" aria-checked="true" aria-label="Sonido de confirmación al afinar: Activado">
+                <span class="config-item-info" aria-hidden="true">
+                    <span class="config-item-title">Sonido de confirmación al afinar</span>
+                    <span class="config-item-value" id="valor-visual-timbre">Activado</span>
+                </span>
+                <span class="switch-pill" aria-hidden="true">
+                    <span class="switch-Knob"></span>
+                </span>
+            </button>
+
+            <!-- OPCIÓN 2: Selector de Afinación del instrumento -->
+            <button type="button" id="btn-abrir-afinacion" class="config-item-btn" aria-haspopup="dialog" aria-label="Afinación del instrumento: Estándar (Mi / E)">
+                <span class="config-item-info" aria-hidden="true">
+                    <span class="config-item-title">Afinación del instrumento</span>
+                    <span class="config-item-value" id="valor-visual-afinacion">Estándar (Mi / E)</span>
+                </span>
+                <svg class="chevron-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 18l6-6-6-6"></path>
+                </svg>
+            </button>
+
+            <!-- OPCIÓN 3: Selector de Nomenclatura de notas -->
+            <button type="button" id="btn-abrir-nomenclatura" class="config-item-btn" aria-haspopup="dialog" aria-label="Nomenclatura de notas: Latino (Do, Re, Mi)">
+                <span class="config-item-info" aria-hidden="true">
+                    <span class="config-item-title">Nomenclatura de notas</span>
+                    <span class="config-item-value" id="valor-visual-nomenclatura">Latino (Do, Re, Mi)</span>
+                </span>
+                <svg class="chevron-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 18l6-6-6-6"></path>
+                </svg>
+            </button>
+
+            <!-- OPCIÓN 4: Módulo de Calibración de referencia (La 4 / A4) -->
+            <div class="config-card-estatica" role="group" aria-label="Calibración de referencia La 4">
+                <span class="config-item-title" aria-hidden="true">Calibración de referencia (La 4 / A4)</span>
+                <div class="calibracion-row">
+                    <button type="button" id="btn-a4-menos" class="btn-calibrar" aria-label="Disminuir frecuencia de referencia La 4">−</button>
+                    <div id="valor-a4" tabindex="0" role="status" aria-live="polite" aria-label="Frecuencia de referencia actual: 440 hercios">440 Hz</div>
+                    <button type="button" id="btn-a4-mas" class="btn-calibrar" aria-label="Aumentar frecuencia de referencia La 4">+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         3. MODAL EMERGENTE: AFINACIÓN DEL INSTRUMENTO
+         ========================================== -->
+    <div id="modal-afinacion" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-afinacion">
+        <div class="modal-sheet">
+            <div class="modal-sheet-header">
+                <h3 id="titulo-modal-afinacion" class="modal-sheet-title">Afinación del instrumento</h3>
+            </div>
+            <div class="modal-opciones-lista" id="lista-opciones-afinacion">
+                <button type="button" class="opcion-modal-btn seleccionada" data-afinacion-idx="0"><span>Estándar (Mi / E)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="1"><span>Medio tono abajo (Mib / Eb)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="2"><span>Un tono abajo (Re / D)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="3"><span>Tono y medio abajo (Do# / C#)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="4"><span>Dos tonos abajo (Do / C)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="5"><span>Barítono estándar (Si / B)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="6"><span>Drop D (6.ª en Re)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="7"><span>Drop C# (Medio tono abajo)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="8"><span>Drop C (6.ª en Do)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="9"><span>Drop B (6.ª en Si)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="10"><span>Drop A (6.ª en La)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="11"><span>Double Drop D (1.ª y 6.ª en Re)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="12"><span>DADGAD (Celta / Acústica)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="13"><span>Open D (Re Mayor abierto)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="14"><span>Open G (Sol Mayor abierto)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="15"><span>Open E (Mi Mayor abierto)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="16"><span>Open A (La Mayor abierto)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="17"><span>Open C (Do Mayor abierto)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="18"><span>Open Dm (Re Menor abierto)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+                <button type="button" class="opcion-modal-btn" data-afinacion-idx="19"><span>Modal C (C G C F C E)</span><span class="marca-seleccion" aria-hidden="true"></span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         4. MODAL EMERGENTE: NOMENCLATURA DE NOTAS
+         ========================================== -->
+    <div id="modal-nomenclatura" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-nomenclatura">
+        <div class="modal-sheet">
+            <div class="modal-sheet-header">
+                <h3 id="titulo-modal-nomenclatura" class="modal-sheet-title">Nomenclatura de notas</h3>
+            </div>
+            <div class="modal-opciones-lista" id="lista-opciones-nomenclatura">
+                <button type="button" class="opcion-modal-btn seleccionada" data-cifrado="latino">
+                    <span>Latino (Do, Re, Mi)</span>
+                    <span class="marca-seleccion" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="opcion-modal-btn" data-cifrado="americano">
+                    <span>Americano (C, D, E)</span>
+                    <span class="marca-seleccion" aria-hidden="true"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* =====================================================================
+           1. REFERENCIAS DEL DOM Y ESTADO GLOBAL CON PERSISTENCIA SEGURA
+           ===================================================================== */
+        var vistaPrincipal = document.getElementById("vista-principal");
+        var vistaConfig = document.getElementById("vista-config");
+        var modalAfinacion = document.getElementById("modal-afinacion");
+        var modalNomenclatura = document.getElementById("modal-nomenclatura");
+
+        var consolaCentral = document.getElementById("consola-central");
+        var display = document.getElementById("display-interactivo");
+        var notaGigante = document.getElementById("nota-gigante");
+        var lecturaHz = document.getElementById("lectura-hz");
+        var lecturaCents = document.getElementById("lectura-cents");
+
+        var btnConfig = document.getElementById("btn-config");
+        var btnAtrasConfig = document.getElementById("btn-atras-config");
+
+        var btnToggleTimbre = document.getElementById("btn-toggle-timbre");
+        var valorVisualTimbre = document.getElementById("valor-visual-timbre");
+
+        var btnAbrirAfinacion = document.getElementById("btn-abrir-afinacion");
+        var valorVisualAfinacion = document.getElementById("valor-visual-afinacion");
+        var botonesOpcionAfinacion = document.querySelectorAll("#lista-opciones-afinacion .opcion-modal-btn");
+
+        var btnAbrirNomenclatura = document.getElementById("btn-abrir-nomenclatura");
+        var valorVisualNomenclatura = document.getElementById("valor-visual-nomenclatura");
+        var botonesOpcionNomenclatura = document.querySelectorAll("#lista-opciones-nomenclatura .opcion-modal-btn");
+
+        var btnA4Menos = document.getElementById("btn-a4-menos");
+        var btnA4Mas = document.getElementById("btn-a4-mas");
+        var valorA4 = document.getElementById("valor-a4");
+
+        var btnMic = document.getElementById("btn-mic");
+        var textoBtnMic = document.getElementById("texto-btn-mic");
+        var btnCuerdas = [
+            document.getElementById("cuerda-1"),
+            document.getElementById("cuerda-2"),
+            document.getElementById("cuerda-3"),
+            document.getElementById("cuerda-4"),
+            document.getElementById("cuerda-5"),
+            document.getElementById("cuerda-6")
+        ];
+
+        var banda1 = document.getElementById("banda-1");
+        var banda2 = document.getElementById("banda-2");
+        var banda3 = document.getElementById("banda-3");
+
+        var estadoConfig = {
+            indiceAfinacion: 0,
+            cifrado: "latino",
+            timbreActivo: true,
+            calibracionA4: 440,
+            umbralRms: 0.015
+        };
+
+        var indiceCuerdaActiva = null;
+        var microfonoActivo = false;
+        var wakeLockSentinel = null;
+
+        /* =====================================================================
+           2. TABLAS DE TEORÍA MUSICAL Y SINCRONIZACIÓN
+           ===================================================================== */
+        var NOMBRES_LATINO = ["Do", "Do#", "Re", "Mib", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "Sib", "Si"];
+        var NOMBRES_AMERICANO = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"];
+        var ORDINALES_CUERDA = [
+            "Primera cuerda",
+            "Segunda cuerda",
+            "Tercera cuerda",
+            "Cuarta cuerda",
+            "Quinta cuerda",
+            "Sexta cuerda"
+        ];
+
+        var NOMBRES_AFINACIONES = [
+            "Estándar (Mi / E)",
+            "Medio tono abajo (Mib / Eb)",
+            "Un tono abajo (Re / D)",
+            "Tono y medio abajo (Do# / C#)",
+            "Dos tonos abajo (Do / C)",
+            "Barítono estándar (Si / B)",
+            "Drop D (6.ª en Re)",
+            "Drop C# (Medio tono abajo)",
+            "Drop C (6.ª en Do)",
+            "Drop B (6.ª en Si)",
+            "Drop A (6.ª en La)",
+            "Double Drop D (1.ª y 6.ª en Re)",
+            "DADGAD (Celta / Acústica)",
+            "Open D (Re Mayor abierto)",
+            "Open G (Sol Mayor abierto)",
+            "Open E (Mi Mayor abierto)",
+            "Open A (La Mayor abierto)",
+            "Open C (Do Mayor abierto)",
+            "Open Dm (Re Menor abierto)",
+            "Modal C (C G C F C E)"
+        ];
+
+        var CATALOGO_AFINACIONES = [
+            [64, 59, 55, 50, 45, 40],
+            [63, 58, 54, 49, 44, 39],
+            [62, 57, 53, 48, 43, 38],
+            [61, 56, 52, 47, 42, 37],
+            [60, 55, 51, 46, 41, 36],
+            [59, 54, 50, 45, 40, 35],
+            [64, 59, 55, 50, 45, 38],
+            [63, 58, 54, 49, 44, 37],
+            [62, 57, 53, 48, 43, 36],
+            [61, 56, 52, 47, 42, 35],
+            [59, 54, 50, 45, 40, 33],
+            [62, 59, 55, 50, 45, 38],
+            [62, 57, 55, 50, 45, 38],
+            [62, 57, 54, 50, 45, 38],
+            [62, 59, 55, 50, 43, 38],
+            [64, 59, 56, 52, 47, 40],
+            [64, 61, 57, 52, 45, 40],
+            [64, 60, 55, 48, 43, 36],
+            [62, 57, 53, 50, 45, 38],
+            [64, 60, 53, 55, 48, 36]
+        ];
+
+        function guardarConfiguracionLocal() {
+            try {
+                localStorage.setItem("afinador_pro_cfg_v2", JSON.stringify({
+                    indiceAfinacion: estadoConfig.indiceAfinacion,
+                    cifrado: estadoConfig.cifrado,
+                    timbreActivo: estadoConfig.timbreActivo,
+                    calibracionA4: estadoConfig.calibracionA4
+                }));
+            } catch (e) {}
+        }
+
+        function cargarConfiguracionLocal() {
+            try {
+                var raw = localStorage.getItem("afinador_pro_cfg_v2");
+                if (!raw) return;
+                var parsed = JSON.parse(raw);
+                if (typeof parsed.indiceAfinacion === "number" && parsed.indiceAfinacion >= 0 && parsed.indiceAfinacion < CATALOGO_AFINACIONES.length) {
+                    estadoConfig.indiceAfinacion = parsed.indiceAfinacion;
+                }
+                if (parsed.cifrado === "latino" || parsed.cifrado === "americano") {
+                    estadoConfig.cifrado = parsed.cifrado;
+                }
+                if (typeof parsed.timbreActivo === "boolean") {
+                    estadoConfig.timbreActivo = parsed.timbreActivo;
+                }
+                if (typeof parsed.calibracionA4 === "number" && parsed.calibracionA4 >= 432 && parsed.calibracionA4 <= 445) {
+                    estadoConfig.calibracionA4 = parsed.calibracionA4;
+                }
+            } catch (e) {}
+        }
+
+        function midiAFrecuencia(midi) {
+            return estadoConfig.calibracionA4 * Math.pow(2, (midi - 69) / 12);
+        }
+
+        function formatearNota(midi) {
+            var indiceNota = ((midi % 12) + 12) % 12;
+            var octava = Math.floor(midi / 12) - 1;
+            if (estadoConfig.cifrado === "latino") {
+                var nLat = NOMBRES_LATINO[indiceNota];
+                return { visual: nLat + " " + octava, hablado: nLat + " " + octava };
+            } else {
+                var nAmer = NOMBRES_AMERICANO[indiceNota];
+                return { visual: nAmer + octava, hablado: nAmer + " " + octava };
+            }
+        }
+
+        var desviacionCentsActual = 0.0;
+        var senalDetectadaActiva = false;
+
+        function actualizarTelemetriaEstudio(hzDetectados, centsDesviacion) {
+            desviacionCentsActual = centsDesviacion;
+            lecturaHz.textContent = Number(hzDetectados).toFixed(2) + " Hz";
+            var signo = centsDesviacion > 0.05 ? "+" : (centsDesviacion < -0.05 ? "" : "±");
+            var valorCents = Math.abs(centsDesviacion) <= 0.05 ? "0.0" : centsDesviacion.toFixed(1);
+            lecturaCents.textContent = signo + valorCents + " cents";
+        }
+
+        function notificarObjetivoAlMotor(hzObjetivo) {
+            if (workletNode && workletNode.port) {
+                workletNode.port.postMessage({
+                    type: "config",
+                    targetHz: hzObjetivo,
+                    rmsThreshold: estadoConfig.umbralRms
+                });
+            }
+        }
+
+        function sincronizarClavijasYVisor() {
+            var midiArray = CATALOGO_AFINACIONES[estadoConfig.indiceAfinacion];
+
+            for (var idx = 0; idx < 6; idx++) {
+                var boton = btnCuerdas[idx];
+                var midi = midiArray[idx];
+                var hz = midiAFrecuencia(midi);
+                var nota = formatearNota(midi);
+                var baseLabel = ORDINALES_CUERDA[idx] + ", " + nota.hablado;
+
+                boton.textContent = nota.visual;
+                boton.setAttribute("data-base-label", baseLabel);
+                boton.setAttribute("data-nota-visual", nota.visual);
+                boton.setAttribute("data-nota-hablada", nota.hablado);
+                boton.setAttribute("data-hz", hz.toFixed(2));
+
+                if (indiceCuerdaActiva === idx) {
+                    boton.classList.add("activa");
+                    boton.setAttribute("aria-pressed", "true");
+                    boton.setAttribute("aria-label", baseLabel + ". Seleccionada");
+                } else {
+                    boton.classList.remove("activa");
+                    boton.setAttribute("aria-pressed", "false");
+                    boton.setAttribute("aria-label", baseLabel);
+                }
+            }
+
+            if (indiceCuerdaActiva !== null) {
+                var midiActivo = midiArray[indiceCuerdaActiva];
+                var notaActiva = formatearNota(midiActivo);
+                var hzActivo = midiAFrecuencia(midiActivo);
+                notaGigante.textContent = notaActiva.visual;
+                notaGigante.classList.add("nota-activa");
+                actualizarFiltroFrancotirador(hzActivo);
+                notificarObjetivoAlMotor(hzActivo);
+                if (!microfonoActivo) {
+                    actualizarTelemetriaEstudio(hzActivo, 0.0);
+                }
+            } else {
+                var midiRef = midiArray[5];
+                var notaRef = formatearNota(midiRef);
+                var hzRef = midiAFrecuencia(midiRef);
+                notaGigante.textContent = notaRef.visual;
+                notaGigante.classList.remove("nota-activa");
+                notificarObjetivoAlMotor(0);
+                actualizarTelemetriaEstudio(hzRef, 0.0);
+            }
+        }
+
+        function sincronizarControlesConfigUI() {
+            var textoEstadoTimbre = estadoConfig.timbreActivo ? "Activado" : "Desactivado";
+            btnToggleTimbre.setAttribute("aria-checked", estadoConfig.timbreActivo ? "true" : "false");
+            btnToggleTimbre.setAttribute("aria-label", "Sonido de confirmación al afinar: " + textoEstadoTimbre);
+            valorVisualTimbre.textContent = textoEstadoTimbre;
+
+            for (var j = 0; j < botonesOpcionAfinacion.length; j++) {
+                if (j === estadoConfig.indiceAfinacion) {
+                    botonesOpcionAfinacion[j].classList.add("seleccionada");
+                } else {
+                    botonesOpcionAfinacion[j].classList.remove("seleccionada");
+                }
+            }
+            var nombreAfinacion = NOMBRES_AFINACIONES[estadoConfig.indiceAfinacion];
+            valorVisualAfinacion.textContent = nombreAfinacion;
+            btnAbrirAfinacion.setAttribute("aria-label", "Afinación del instrumento: " + nombreAfinacion);
+
+            for (var n = 0; n < botonesOpcionNomenclatura.length; n++) {
+                var cif = botonesOpcionNomenclatura[n].getAttribute("data-cifrado");
+                if (cif === estadoConfig.cifrado) {
+                    botonesOpcionNomenclatura[n].classList.add("seleccionada");
+                } else {
+                    botonesOpcionNomenclatura[n].classList.remove("seleccionada");
+                }
+            }
+            var textoCifrado = (estadoConfig.cifrado === "latino")
+                ? "Latino (Do, Re, Mi)"
+                : "Americano (C, D, E)";
+            valorVisualNomenclatura.textContent = textoCifrado;
+            btnAbrirNomenclatura.setAttribute("aria-label", "Nomenclatura de notas: " + textoCifrado);
+
+            valorA4.textContent = estadoConfig.calibracionA4 + " Hz";
+            valorA4.setAttribute("aria-label", "Frecuencia de referencia actual: " + estadoConfig.calibracionA4 + " hercios");
+        }
+
+        /* =====================================================================
+           3. SELECCIÓN DE LAS 6 CLAVIJAS (MARCAR Y DESMARCAR)
+           ===================================================================== */
+        function reiniciarEstadoEstabilizador() {
+            ventanaMediana.fill(0);
+            totalMuestrasMediana = 0;
+            cursorMediana = 0;
+            frecuenciaSuavizada = 0;
+            contadorSilencioFrames = 0;
+            ultimaFraseAnunciada = "";
+            inicioEnZonaAfinada = 0;
+            timbreDisparadoEnEsteBloqueo = false;
+            senalDetectadaActiva = false;
+            desviacionCentsActual = 0.0;
+        }
+
+        function manejarClickCuerda(idx) {
+            if (indiceCuerdaActiva === idx) {
+                indiceCuerdaActiva = null;
+                reiniciarEstadoEstabilizador();
+                consolaCentral.classList.remove("afinado-lock");
+                notaGigante.classList.remove("nota-afinada");
+                sincronizarClavijasYVisor();
+                display.textContent = "Cuerda desmarcada. Seleccione una cuerda para comenzar.";
+                return;
+            }
+
+            indiceCuerdaActiva = idx;
+            reiniciarEstadoEstabilizador();
+            consolaCentral.classList.remove("afinado-lock");
+            notaGigante.classList.remove("nota-afinada");
+
+            sincronizarClavijasYVisor();
+
+            var notaHablada = btnCuerdas[idx].getAttribute("data-nota-hablada");
+            if (microfonoActivo) {
+                display.textContent = "Afinando " + notaHablada + ". Escuchando...";
+            } else {
+                display.textContent = notaHablada + " seleccionada. Active el micrófono.";
+            }
+        }
+
+        btnCuerdas[0].addEventListener("click", function() { manejarClickCuerda(0); });
+        btnCuerdas[1].addEventListener("click", function() { manejarClickCuerda(1); });
+        btnCuerdas[2].addEventListener("click", function() { manejarClickCuerda(2); });
+        btnCuerdas[3].addEventListener("click", function() { manejarClickCuerda(3); });
+        btnCuerdas[4].addEventListener("click", function() { manejarClickCuerda(4); });
+        btnCuerdas[5].addEventListener("click", function() { manejarClickCuerda(5); });
+
+        /* =====================================================================
+           4. NAVEGACIÓN DEL PANEL DE CONFIGURACIÓN Y MODALES EMERGENTES
+           ===================================================================== */
+        btnConfig.addEventListener("click", function() {
+            vistaPrincipal.style.display = "none";
+            vistaConfig.style.display = "flex";
+            setTimeout(function() { btnAtrasConfig.focus(); }, 40);
+        });
+
+        btnAtrasConfig.addEventListener("click", function() {
+            vistaConfig.style.display = "none";
+            vistaPrincipal.style.display = "flex";
+            setTimeout(function() { btnConfig.focus(); }, 40);
+        });
+
+        btnToggleTimbre.addEventListener("click", function() {
+            estadoConfig.timbreActivo = !estadoConfig.timbreActivo;
+            sincronizarControlesConfigUI();
+            guardarConfiguracionLocal();
+        });
+
+        function abrirModalAfinacion() {
+            vistaConfig.setAttribute("aria-hidden", "true");
+            modalAfinacion.style.display = "flex";
+            var btnActual = botonesOpcionAfinacion[estadoConfig.indiceAfinacion];
+            if (btnActual) {
+                setTimeout(function() { btnActual.focus(); }, 40);
+            }
+        }
+
+        function cerrarModalAfinacion() {
+            modalAfinacion.style.display = "none";
+            vistaConfig.removeAttribute("aria-hidden");
+            setTimeout(function() { btnAbrirAfinacion.focus(); }, 40);
+        }
+
+        btnAbrirAfinacion.addEventListener("click", abrirModalAfinacion);
+
+        for (var i = 0; i < botonesOpcionAfinacion.length; i++) {
+            (function(botonOpcion) {
+                botonOpcion.addEventListener("click", function() {
+                    var idxSeleccionado = parseInt(botonOpcion.getAttribute("data-afinacion-idx"), 10) || 0;
+                    estadoConfig.indiceAfinacion = idxSeleccionado;
+                    reiniciarEstadoEstabilizador();
+                    sincronizarControlesConfigUI();
+                    sincronizarClavijasYVisor();
+                    guardarConfiguracionLocal();
+                    cerrarModalAfinacion();
+                });
+            })(botonesOpcionAfinacion[i]);
+        }
+
+        modalAfinacion.addEventListener("click", function(e) {
+            if (e.target === modalAfinacion) {
+                cerrarModalAfinacion();
+            }
+        });
+
+        function abrirModalNomenclatura() {
+            vistaConfig.setAttribute("aria-hidden", "true");
+            modalNomenclatura.style.display = "flex";
+            var idxFoco = (estadoConfig.cifrado === "latino") ? 0 : 1;
+            setTimeout(function() { botonesOpcionNomenclatura[idxFoco].focus(); }, 40);
+        }
+
+        function cerrarModalNomenclatura() {
+            modalNomenclatura.style.display = "none";
+            vistaConfig.removeAttribute("aria-hidden");
+            setTimeout(function() { btnAbrirNomenclatura.focus(); }, 40);
+        }
+
+        btnAbrirNomenclatura.addEventListener("click", abrirModalNomenclatura);
+
+        for (var m = 0; m < botonesOpcionNomenclatura.length; m++) {
+            (function(botonNom) {
+                botonNom.addEventListener("click", function() {
+                    var nuevoCifrado = botonNom.getAttribute("data-cifrado");
+                    estadoConfig.cifrado = nuevoCifrado;
+                    sincronizarControlesConfigUI();
+                    sincronizarClavijasYVisor();
+                    guardarConfiguracionLocal();
+                    cerrarModalNomenclatura();
+                });
+            })(botonesOpcionNomenclatura[m]);
+        }
+
+        modalNomenclatura.addEventListener("click", function(e) {
+            if (e.target === modalNomenclatura) {
+                cerrarModalNomenclatura();
+            }
+        });
+
+        function actualizarEtiquetaCalibracion() {
+            reiniciarEstadoEstabilizador();
+            sincronizarControlesConfigUI();
+            sincronizarClavijasYVisor();
+            guardarConfiguracionLocal();
+        }
+
+        btnA4Menos.addEventListener("click", function() {
+            if (estadoConfig.calibracionA4 > 432) {
+                estadoConfig.calibracionA4 -= 1;
+                actualizarEtiquetaCalibracion();
+            }
+        });
+
+        btnA4Mas.addEventListener("click", function() {
+            if (estadoConfig.calibracionA4 < 445) {
+                estadoConfig.calibracionA4 += 1;
+                actualizarEtiquetaCalibracion();
+            }
+        });
+
+        /* =====================================================================
+           5. SINTETIZADOR DSP DE CAMPANA CRISTALINA (ESTILO FENDER / GUITARTUNA)
+           ===================================================================== */
+        function dispararParcialCristal( destino, freq, tipo, tiempoInicio, duracion, gananciaPico, detuneCents ) {
+            var osc = audioCtx.createOscillator();
+            var gain = audioCtx.createGain();
+
+            osc.type = tipo;
+            osc.frequency.setValueAtTime(freq, tiempoInicio);
+            if (detuneCents) {
+                osc.detune.setValueAtTime(detuneCents, tiempoInicio);
+            }
+
+            gain.gain.setValueAtTime(0.0001, tiempoInicio);
+            gain.gain.linearRampToValueAtTime(gananciaPico, tiempoInicio + 0.004);
+            gain.gain.exponentialRampToValueAtTime(0.0001, tiempoInicio + duracion);
+
+            osc.connect(gain);
+            gain.connect(destino);
+
+            osc.start(tiempoInicio);
+            osc.stop(tiempoInicio + duracion + 0.01);
+
+            osc.onended = function() {
+                try {
+                    osc.disconnect();
+                    gain.disconnect();
+                } catch (e) {}
+            };
+        }
+
+        function sonarTimbreConfirmacion() {
+            if (!estadoConfig.timbreActivo || !audioCtx) return;
+            try {
+                if (audioCtx.state === "suspended") {
+                    audioCtx.resume();
+                }
+
+                var t0 = audioCtx.currentTime;
+                var masterGain = audioCtx.createGain();
+                masterGain.gain.setValueAtTime(0.85, t0);
+                masterGain.connect(audioCtx.destination);
+
+                // 1. Transiente percusivo de cristal (0ms): corta la resonancia acústica de la guitarra
+                dispararParcialCristal(masterGain, 3520.00, "sine", t0, 0.045, 0.14, 0);
+                dispararParcialCristal(masterGain, 2637.02, "triangle", t0, 0.075, 0.12, 0);
+
+                // 2. Golpe fundamental cálido de referencia (0ms): La 5 (880 Hz) + Mi 6 (1318.51 Hz)
+                dispararParcialCristal(masterGain, 880.00, "sine", t0, 0.36, 0.24, 0);
+                dispararParcialCristal(masterGain, 1318.51, "triangle", t0, 0.28, 0.14, 3);
+
+                // 3. Destello armónico de confirmación (+35ms): acorde cristalino ascendente (La 6 + Do# 7 + Mi 7)
+                var tDestello = t0 + 0.035;
+                dispararParcialCristal(masterGain, 1760.00, "sine", tDestello, 0.52, 0.28, 0);
+                dispararParcialCristal(masterGain, 1760.00, "triangle", tDestello, 0.42, 0.10, -4);
+                dispararParcialCristal(masterGain, 2217.46, "sine", tDestello, 0.38, 0.13, 2);
+                dispararParcialCristal(masterGain, 2637.02, "sine", tDestello, 0.32, 0.15, 0);
+
+                setTimeout(function() {
+                    try { masterGain.disconnect(); } catch (e) {}
+                }, 650);
+            } catch (e) {}
+        }
+
+        /* =====================================================================
+           6. ARQUITECTURA AUDIOWORKLET ZERO-ALLOCATION + RESPUESTA EN HILO UI
+           ===================================================================== */
+        var CODIGO_WORKLET_DSP = [
+            "class StrobePitchWorklet extends AudioWorkletProcessor {",
+            "  constructor() {",
+            "    super();",
+            "    this.bufSize = 4096;",
+            "    this.ringBuffer = new Float32Array(this.bufSize);",
+            "    this.linearBuffer = new Float32Array(this.bufSize);",
+            "    this.nsdf = new Float32Array(2048);",
+            "    this.writeIndex = 0;",
+            "    this.samplesSinceLastAnalysis = 0;",
+            "    this.hopSize = 512;",
+            "    this.targetHz = 0;",
+            "    this.rmsThreshold = 0.015;",
+            "    this.gateOpen = false;",
+            "    var self = this;",
+            "    this.port.onmessage = function(e) {",
+            "      var d = e.data;",
+            "      if (!d) return;",
+            "      if (d.type === 'config') {",
+            "        if (typeof d.targetHz === 'number') self.targetHz = d.targetHz;",
+            "        if (typeof d.rmsThreshold === 'number') self.rmsThreshold = d.rmsThreshold;",
+            "      }",
+            "    };",
+            "  }",
+            "  process(inputs) {",
+            "    var input = inputs[0];",
+            "    if (!input || !input[0]) return true;",
+            "    var channel = input[0];",
+            "    var len = channel.length;",
+            "    for (var i = 0; i < len; i++) {",
+            "      this.ringBuffer[this.writeIndex] = channel[i];",
+            "      this.writeIndex = (this.writeIndex + 1) & 4095;",
+            "    }",
+            "    this.samplesSinceLastAnalysis += len;",
+            "    if (this.samplesSinceLastAnalysis >= this.hopSize) {",
+            "      this.samplesSinceLastAnalysis = 0;",
+            "      if (this.targetHz > 20) {",
+            "        var ptr = this.writeIndex;",
+            "        var sumSq = 0;",
+            "        var mean = 0;",
+            "        for (var j = 0; j < 4096; j++) {",
+            "          var s = this.ringBuffer[ptr];",
+            "          this.linearBuffer[j] = s;",
+            "          mean += s;",
+            "          ptr = (ptr + 1) & 4095;",
+            "        }",
+            "        mean /= 4096;",
+            "        for (var m = 0; m < 4096; m++) {",
+            "          var centered = this.linearBuffer[m] - mean;",
+            "          this.linearBuffer[m] = centered;",
+            "          sumSq += centered * centered;",
+            "        }",
+            "        var rms = Math.sqrt(sumSq / 4096);",
+            "        var umbralEfectivo = this.gateOpen ? (this.rmsThreshold * 0.55) : this.rmsThreshold;",
+            "        if (rms < umbralEfectivo) {",
+            "          this.gateOpen = false;",
+            "          this.port.postMessage({ freq: -1, clarity: 0 });",
+            "        } else {",
+            "          var res = this.calcularMPM(sampleRate, this.targetHz);",
+            "          if (res.freq > 0) {",
+            "            this.gateOpen = true;",
+            "          } else {",
+            "            this.gateOpen = false;",
+            "          }",
+            "          this.port.postMessage(res);",
+            "        }",
+            "      }",
+            "    }",
+            "    return true;",
+            "  }",
+            "  calcularMPM(sr, hzObj) {",
+            "    var tauObj = sr / hzObj;",
+            "    var minTau = Math.max(16, Math.floor(tauObj * 0.70));",
+            "    var maxTau = Math.min(2040, Math.ceil(tauObj * 1.40));",
+            "    var W = Math.min(1400, 4096 - maxTau - 2);",
+            "    var buf = this.linearBuffer;",
+            "    var nsdf = this.nsdf;",
+            "    var maxGlobal = -1;",
+            "    for (var tau = minTau - 1; tau <= maxTau + 1; tau++) {",
+            "      var acf = 0;",
+            "      var div = 0;",
+            "      for (var i = 0; i < W; i++) {",
+            "        var x0 = buf[i];",
+            "        var xT = buf[i + tau];",
+            "        acf += x0 * xT;",
+            "        div += x0 * x0 + xT * xT;",
+            "      }",
+            "      var val = div > 0 ? (2 * acf) / div : 0;",
+            "      nsdf[tau] = val;",
+            "      if (tau >= minTau && tau <= maxTau && val > maxGlobal) {",
+            "        maxGlobal = val;",
+            "      }",
+            "    }",
+            "    if (maxGlobal < 0.72) return { freq: -1, clarity: 0 };",
+            "    var umbralPico = Math.max(0.72, maxGlobal * 0.88);",
+            "    var mejorTau = -1;",
+            "    var mejorVal = -1;",
+            "    for (var k = minTau; k <= maxTau; k++) {",
+            "      var v = nsdf[k];",
+            "      if (v >= umbralPico && v > nsdf[k - 1] && v >= nsdf[k + 1]) {",
+            "        mejorTau = k;",
+            "        mejorVal = v;",
+            "        break;",
+            "      }",
+            "    }",
+            "    if (mejorTau === -1) return { freq: -1, clarity: 0 };",
+            "    var y1 = nsdf[mejorTau - 1];",
+            "    var y2 = nsdf[mejorTau];",
+            "    var y3 = nsdf[mejorTau + 1];",
+            "    var denom = y1 - 2 * y2 + y3;",
+            "    var delta = 0;",
+            "    if (Math.abs(denom) > 1e-7) {",
+            "      delta = (y1 - y3) / (2 * denom);",
+            "      if (delta > 1) delta = 1;",
+            "      else if (delta < -1) delta = -1;",
+            "    }",
+            "    return { freq: sr / (mejorTau + delta), clarity: mejorVal };",
+            "  }",
+            "}",
+            "registerProcessor('strobe-pitch-worklet', StrobePitchWorklet);"
+        ].join("\n");
+
+        var audioCtx = null;
+        var mediaStream = null;
+        var sourceNode = null;
+        var highpassNode = null;
+        var lowpassNode = null;
+        var workletNode = null;
+        var silentGainNode = null;
+        var analyserFallbackNode = null;
+        var bufferFallback = null;
+        var nsdfFallback = new Float32Array(2048);
+        var idBucleFallback = null;
+        var gateOpenFallback = false;
+
+        // Arreglos pre-alojados en el hilo principal (Zero-Allocation para evitar Garbage Collection)
+        var ventanaMediana = new Float64Array(5);
+        var copiaOrdenada = new Float64Array(5);
+        var totalMuestrasMediana = 0;
+        var cursorMediana = 0;
+        var frecuenciaSuavizada = 0;
+        var contadorSilencioFrames = 0;
+
+        var fraseCandidata = "";
+        var inicioFraseCandidata = 0;
+        var ultimaFraseAnunciada = "";
+        var ultimoTiempoAnuncio = 0;
+        var inicioEnZonaAfinada = 0;
+        var timbreDisparadoEnEsteBloqueo = false;
+
+        function obtenerMedianaSinAsignacion(nuevaFreq) {
+            ventanaMediana[cursorMediana] = nuevaFreq;
+            cursorMediana = (cursorMediana + 1) % 5;
+            if (totalMuestrasMediana < 5) {
+                totalMuestrasMediana++;
+            }
+            for (var i = 0; i < totalMuestrasMediana; i++) {
+                copiaOrdenada[i] = ventanaMediana[i];
+            }
+            for (var a = 1; a < totalMuestrasMediana; a++) {
+                var clave = copiaOrdenada[a];
+                var b = a - 1;
+                while (b >= 0 && copiaOrdenada[b] > clave) {
+                    copiaOrdenada[b + 1] = copiaOrdenada[b];
+                    b--;
+                }
+                copiaOrdenada[b + 1] = clave;
+            }
+            return copiaOrdenada[Math.floor(totalMuestrasMediana / 2)];
+        }
+
+        function actualizarFiltroFrancotirador(hzObjetivo) {
+            if (!audioCtx || !highpassNode || !lowpassNode) return;
+            var ahora = audioCtx.currentTime;
+            highpassNode.frequency.setTargetAtTime(Math.max(40, hzObjetivo * 0.68), ahora, 0.015);
+            lowpassNode.frequency.setTargetAtTime(Math.min(2000, hzObjetivo * 1.42), ahora, 0.015);
+        }
+
+        function procesarResultadoFrecuencia(freqCruda, claridad) {
+            if (!microfonoActivo || indiceCuerdaActiva === null) {
+                senalDetectadaActiva = false;
+                return;
+            }
+
+            var ahora = performance.now();
+            var midiObjetivo = CATALOGO_AFINACIONES[estadoConfig.indiceAfinacion][indiceCuerdaActiva];
+            var hzObjetivo = midiAFrecuencia(midiObjetivo);
+
+            if (freqCruda > 0) {
+                contadorSilencioFrames = 0;
+                var freqMediana = obtenerMedianaSinAsignacion(freqCruda);
+
+                if (frecuenciaSuavizada === 0) {
+                    frecuenciaSuavizada = freqMediana;
+                } else {
+                    var diffRelativa = Math.abs(freqMediana - frecuenciaSuavizada) / hzObjetivo;
+                    var alpha = diffRelativa > 0.008 ? 0.65 : 0.28;
+                    frecuenciaSuavizada = frecuenciaSuavizada + alpha * (freqMediana - frecuenciaSuavizada);
+                }
+
+                var cents = (1200 * Math.log(frecuenciaSuavizada / hzObjetivo)) / Math.LN2;
+
+                senalDetectadaActiva = true;
+                actualizarTelemetriaEstudio(frecuenciaSuavizada, cents);
+
+                var nuevaFrase = "";
+                var enPuntoExacto = Math.abs(cents) <= 2.2;
+
+                if (cents < -10) {
+                    nuevaFrase = "Demasiado bajo, suba el tono.";
+                } else if (cents < -2.2) {
+                    nuevaFrase = "Un poco bajo.";
+                } else if (enPuntoExacto) {
+                    nuevaFrase = "Mantenlo ahí.";
+                } else if (cents <= 10) {
+                    nuevaFrase = "Un poco alto.";
+                } else {
+                    nuevaFrase = "Demasiado alto, baje el tono.";
+                }
+
+                if (enPuntoExacto) {
+                    consolaCentral.classList.add("afinado-lock");
+                    notaGigante.classList.add("nota-afinada");
+                    if (inicioEnZonaAfinada === 0) {
+                        inicioEnZonaAfinada = ahora;
+                    } else if (!timbreDisparadoEnEsteBloqueo && (ahora - inicioEnZonaAfinada >= 450)) {
+                        timbreDisparadoEnEsteBloqueo = true;
+                        sonarTimbreConfirmacion();
+                    }
+                } else {
+                    consolaCentral.classList.remove("afinado-lock");
+                    notaGigante.classList.remove("nota-afinada");
+                    if (Math.abs(cents) > 4.5) {
+                        inicioEnZonaAfinada = 0;
+                        timbreDisparadoEnEsteBloqueo = false;
+                    }
+                }
+
+                if (nuevaFrase !== fraseCandidata) {
+                    fraseCandidata = nuevaFrase;
+                    inicioFraseCandidata = ahora;
+                } else if (ahora - inicioFraseCandidata >= 400) {
+                    if (nuevaFrase !== ultimaFraseAnunciada && (ahora - ultimoTiempoAnuncio >= 950)) {
+                        ultimaFraseAnunciada = nuevaFrase;
+                        ultimoTiempoAnuncio = ahora;
+                        display.textContent = nuevaFrase;
+                    }
+                }
+            } else {
+                contadorSilencioFrames++;
+                if (contadorSilencioFrames > 4) {
+                    senalDetectadaActiva = false;
+                    totalMuestrasMediana = 0;
+                    cursorMediana = 0;
+                    frecuenciaSuavizada = 0;
+                    consolaCentral.classList.remove("afinado-lock");
+                    notaGigante.classList.remove("nota-afinada");
+                }
+            }
+        }
+
+        /* =====================================================================
+           7. MOTOR DE RESPALDO (FALLBACK ZERO-ALLOCATION SI SE ABRE EN FILE://)
+           ===================================================================== */
+        function calcularMPMFallback(buf, sampleRate, hzObjetivo) {
+            var N = buf.length;
+            var mean = 0;
+            for (var i = 0; i < N; i++) {
+                mean += buf[i];
+            }
+            mean /= N;
+
+            var sumaCuadrados = 0;
+            for (var m = 0; m < N; m++) {
+                var c = buf[m] - mean;
+                buf[m] = c;
+                sumaCuadrados += c * c;
+            }
+
+            var rms = Math.sqrt(sumaCuadrados / N);
+            var umbral = gateOpenFallback ? (estadoConfig.umbralRms * 0.55) : estadoConfig.umbralRms;
+            if (rms < umbral) {
+                gateOpenFallback = false;
+                return -1;
+            }
+
+            var tauObjetivo = sampleRate / hzObjetivo;
+            var minTau = Math.max(16, Math.floor(tauObjetivo * 0.70));
+            var maxTau = Math.min(2040, Math.ceil(tauObjetivo * 1.40));
+            var W = Math.min(1400, N - maxTau - 2);
+            var maxGlobal = -1;
+
+            for (var tau = minTau - 1; tau <= maxTau + 1; tau++) {
+                var acf = 0;
+                var divisor = 0;
+                for (var j = 0; j < W; j++) {
+                    var x0 = buf[j];
+                    var xTau = buf[j + tau];
+                    acf += x0 * xTau;
+                    divisor += x0 * x0 + xTau * xTau;
+                }
+                var val = divisor > 0 ? (2 * acf) / divisor : 0;
+                nsdfFallback[tau] = val;
+                if (tau >= minTau && tau <= maxTau && val > maxGlobal) {
+                    maxGlobal = val;
+                }
+            }
+
+            if (maxGlobal < 0.72) {
+                gateOpenFallback = false;
+                return -1;
+            }
+
+            var umbralPico = Math.max(0.72, maxGlobal * 0.88);
+            var mejorTau = -1;
+
+            for (var k = minTau; k <= maxTau; k++) {
+                var v = nsdfFallback[k];
+                if (v >= umbralPico && v > nsdfFallback[k - 1] && v >= nsdfFallback[k + 1]) {
+                    mejorTau = k;
+                    break;
+                }
+            }
+
+            if (mejorTau === -1) {
+                gateOpenFallback = false;
+                return -1;
+            }
+
+            gateOpenFallback = true;
+            var y1 = nsdfFallback[mejorTau - 1];
+            var y2 = nsdfFallback[mejorTau];
+            var y3 = nsdfFallback[mejorTau + 1];
+            var denom = y1 - 2 * y2 + y3;
+            var delta = 0;
+            if (Math.abs(denom) > 1e-7) {
+                delta = (y1 - y3) / (2 * denom);
+                if (delta > 1) delta = 1;
+                else if (delta < -1) delta = -1;
+            }
+
+            return sampleRate / (mejorTau + delta);
+        }
+
+        function procesarCicloFallback() {
+            if (!microfonoActivo || !analyserFallbackNode) return;
+            if (indiceCuerdaActiva !== null) {
+                analyserFallbackNode.getFloatTimeDomainData(bufferFallback);
+                var midiObjetivo = CATALOGO_AFINACIONES[estadoConfig.indiceAfinacion][indiceCuerdaActiva];
+                var hzObjetivo = midiAFrecuencia(midiObjetivo);
+                var freq = calcularMPMFallback(bufferFallback, audioCtx.sampleRate, hzObjetivo);
+                procesarResultadoFrecuencia(freq, 1.0);
+            } else {
+                senalDetectadaActiva = false;
+            }
+            idBucleFallback = requestAnimationFrame(procesarCicloFallback);
+        }
+
+        /* =====================================================================
+           8. GESTIÓN DE WAKE LOCK (PANTALLA SIEMPRE ENCENDIDA AL AFINAR)
+           ===================================================================== */
+        function solicitarWakeLock() {
+            if ("wakeLock" in navigator && navigator.wakeLock && navigator.wakeLock.request) {
+                navigator.wakeLock.request("screen").then(function(sentinel) {
+                    wakeLockSentinel = sentinel;
+                }).catch(function() {});
+            }
+        }
+
+        function liberarWakeLock() {
+            if (wakeLockSentinel) {
+                try { wakeLockSentinel.release(); } catch (e) {}
+                wakeLockSentinel = null;
+            }
+        }
+
+        /* =====================================================================
+           9. ENCENDIDO Y APAGADO DEL MICRÓFONO (AUDIOWORKLET + FALLBACK)
+           ===================================================================== */
+        function activarInterfazMicrofonoEncendido() {
+            microfonoActivo = true;
+            textoBtnMic.textContent = "Apagar micrófono";
+            btnMic.classList.add("activo");
+            solicitarWakeLock();
+
+            if (indiceCuerdaActiva === null) {
+                display.textContent = "Micrófono encendido. Seleccione una cuerda para afinar.";
+            } else {
+                var notaHablada = btnCuerdas[indiceCuerdaActiva].getAttribute("data-nota-hablada");
+                display.textContent = "Afinando " + notaHablada + ". Escuchando...";
+            }
+        }
+
+        function iniciarModoFallbackAnalyser() {
+            analyserFallbackNode = audioCtx.createAnalyser();
+            analyserFallbackNode.fftSize = 4096;
+            bufferFallback = new Float32Array(4096);
+            lowpassNode.connect(analyserFallbackNode);
+            activarInterfazMicrofonoEncendido();
+            idBucleFallback = requestAnimationFrame(procesarCicloFallback);
+        }
+
+        function encenderMicrofono() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                display.textContent = "El navegador requiere HTTPS o instalar la aplicación web para usar el micrófono.";
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false,
+                    channelCount: 1,
+                    latency: 0
+                }
+            }).then(function(stream) {
+                mediaStream = stream;
+                var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass({ latencyHint: "interactive" });
+                if (audioCtx.state === "suspended") {
+                    audioCtx.resume();
+                }
+
+                sourceNode = audioCtx.createMediaStreamSource(mediaStream);
+
+                highpassNode = audioCtx.createBiquadFilter();
+                highpassNode.type = "highpass";
+                highpassNode.Q.value = 0.707;
+
+                lowpassNode = audioCtx.createBiquadFilter();
+                lowpassNode.type = "lowpass";
+                lowpassNode.Q.value = 0.707;
+
+                sourceNode.connect(highpassNode);
+                highpassNode.connect(lowpassNode);
+
+                var hzInicial = 0;
+                if (indiceCuerdaActiva !== null) {
+                    var midi = CATALOGO_AFINACIONES[estadoConfig.indiceAfinacion][indiceCuerdaActiva];
+                    hzInicial = midiAFrecuencia(midi);
+                    actualizarFiltroFrancotirador(hzInicial);
+                }
+
+                if (audioCtx.audioWorklet && typeof Blob !== "undefined" && typeof URL !== "undefined") {
+                    var blob = new Blob([CODIGO_WORKLET_DSP], { type: "application/javascript" });
+                    var urlWorklet = URL.createObjectURL(blob);
+
+                    audioCtx.audioWorklet.addModule(urlWorklet).then(function() {
+                        URL.revokeObjectURL(urlWorklet);
+                        workletNode = new AudioWorkletNode(audioCtx, "strobe-pitch-worklet");
+                        workletNode.port.onmessage = function(e) {
+                            if (e.data) {
+                                procesarResultadoFrecuencia(e.data.freq, e.data.clarity);
+                            }
+                        };
+
+                        silentGainNode = audioCtx.createGain();
+                        silentGainNode.gain.value = 0;
+
+                        lowpassNode.connect(workletNode);
+                        workletNode.connect(silentGainNode);
+                        silentGainNode.connect(audioCtx.destination);
+
+                        notificarObjetivoAlMotor(hzInicial);
+                        activarInterfazMicrofonoEncendido();
+                    }).catch(function() {
+                        URL.revokeObjectURL(urlWorklet);
+                        iniciarModoFallbackAnalyser();
+                    });
+                } else {
+                    iniciarModoFallbackAnalyser();
+                }
+            }).catch(function() {
+                microfonoActivo = false;
+                textoBtnMic.textContent = "Activar micrófono";
+                btnMic.classList.remove("activo");
+                display.textContent = "Permiso denegado o archivo abierto sin servidor seguro.";
+            });
+        }
+
+        function apagarMicrofono() {
+            microfonoActivo = false;
+            reiniciarEstadoEstabilizador();
+            liberarWakeLock();
+
+            if (idBucleFallback) {
+                cancelAnimationFrame(idBucleFallback);
+                idBucleFallback = null;
+            }
+            if (workletNode) {
+                try {
+                    workletNode.port.onmessage = null;
+                    workletNode.disconnect();
+                } catch (e) {}
+                workletNode = null;
+            }
+            if (silentGainNode) {
+                try { silentGainNode.disconnect(); } catch (e) {}
+                silentGainNode = null;
+            }
+            if (analyserFallbackNode) {
+                try { analyserFallbackNode.disconnect(); } catch (e) {}
+                analyserFallbackNode = null;
+            }
+            if (mediaStream) {
+                var tracks = mediaStream.getTracks();
+                for (var i = 0; i < tracks.length; i++) {
+                    tracks[i].stop();
+                }
+                mediaStream = null;
+            }
+            if (audioCtx) {
+                try { audioCtx.close(); } catch (e) {}
+                audioCtx = null;
+            }
+
+            consolaCentral.classList.remove("afinado-lock");
+            notaGigante.classList.remove("nota-afinada");
+            textoBtnMic.textContent = "Activar micrófono";
+            btnMic.classList.remove("activo");
+            display.textContent = "Micrófono en pausa.";
+        }
+
+        btnMic.addEventListener("click", function() {
+            if (microfonoActivo) {
+                apagarMicrofono();
+            } else {
+                encenderMicrofono();
+            }
+        });
+
+        /* =====================================================================
+           10. ANIMACIÓN ESTROBOSCÓPICA INDEPENDIENTE DE FPS (60/90/120 Hz)
+           ===================================================================== */
+        var faseStrobe = 0;
+        var ultimoTimestampFrame = 0;
+
+        function animarEstroboscopio(timestamp) {
+            if (!ultimoTimestampFrame) ultimoTimestampFrame = timestamp;
+            var dt = (timestamp - ultimoTimestampFrame) / 16.6667;
+            if (dt > 4) dt = 1;
+            ultimoTimestampFrame = timestamp;
+
+            if (microfonoActivo && senalDetectadaActiva && Math.abs(desviacionCentsActual) > 0.08) {
+                var velocidad = Math.max(-45, Math.min(45, desviacionCentsActual)) * 0.18 * dt;
+                faseStrobe = (faseStrobe + velocidad) % 1120;
+                banda1.style.backgroundPositionX = (faseStrobe * 1.5).toFixed(2) + "px";
+                banda2.style.backgroundPositionX = faseStrobe.toFixed(2) + "px";
+                banda3.style.backgroundPositionX = (faseStrobe * 0.5).toFixed(2) + "px";
+            }
+            requestAnimationFrame(animarEstroboscopio);
+        }
+
+        /* =====================================================================
+           11. INICIALIZACIÓN, SEGUNDO PLANO Y REGISTRO PWA SEGURO
+           ===================================================================== */
+        cargarConfiguracionLocal();
+        sincronizarControlesConfigUI();
+        sincronizarClavijasYVisor();
+        requestAnimationFrame(animarEstroboscopio);
+
+        document.addEventListener("visibilitychange", function() {
+            if (document.hidden && microfonoActivo) {
+                apagarMicrofono();
+            }
+        });
+
+        if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+            window.addEventListener("load", function() {
+                navigator.serviceWorker.register("./sw.js").catch(function() {});
+            });
+        }
+    </script>
+</body>
+</html>
